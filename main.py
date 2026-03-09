@@ -1,0 +1,204 @@
+import time
+import json
+import os
+
+class CSP:
+    def __init__(self, variables, domains, neighbors, constraints):
+        self.variables = variables
+        self.domains = {v: list(domains[v]) for v in variables}
+        self.neighbors = neighbors
+        self.constraints = constraints
+
+        # instrumentation
+        self.assignments = 0
+        self.backtracks = 0
+
+    def is_consistent(self, var, value, assignment):
+        for n in self.neighbors[var]:
+            if n in assignment:
+                if not self.constraints(var, value, n, assignment[n]):
+                    return False
+        return True
+
+    def select_unassigned_variable(self, assignment):
+        unassigned = [v for v in self.variables if v not in assignment]
+        return min(unassigned, key=lambda v: len(self.domains[v]))
+
+    def order_domain_values(self, var, assignment, use_lcv):
+        if not use_lcv:
+            return list(self.domains[var])
+
+        def conflicts(value):
+            count = 0
+            for n in self.neighbors[var]:
+                if n not in assignment:
+                    for v in self.domains[n]:
+                        if not self.constraints(var, value, n, v):
+                            count += 1
+            return count
+
+        return sorted(self.domains[var], key=conflicts)
+
+    def forward_check(self, var, value, assignment):
+        removed = []
+        for n in self.neighbors[var]:
+            if n not in assignment:
+                for v in list(self.domains[n]):
+                    if not self.constraints(var, value, n, v):
+                        self.domains[n].remove(v)
+                        removed.append((n, v))
+                if not self.domains[n]:
+                    return False, removed
+        return True, removed
+
+    def backtrack(self, assignment, use_fc, use_lcv):
+        if len(assignment) == len(self.variables):
+            return assignment
+
+        var = self.select_unassigned_variable(assignment)
+
+        for value in self.order_domain_values(var, assignment, use_lcv):
+            if self.is_consistent(var, value, assignment):
+                assignment[var] = value
+                self.assignments += 1
+
+                if use_fc:
+                    ok, removed = self.forward_check(var, value, assignment)
+                    if ok:
+                        result = self.backtrack(assignment, use_fc, use_lcv)
+                        if result is not None:
+                            return result
+                    for (n, v) in removed:
+                        self.domains[n].append(v)
+                else:
+                    result = self.backtrack(assignment, use_fc, use_lcv)
+                    if result is not None:
+                        return result
+
+                del assignment[var]
+                self.backtracks += 1
+
+        return None
+
+    def solve(self, config):
+        use_fc = ("fc" in config)
+        use_lcv = ("lcv" in config)
+
+        start = time.time()
+        assignment = {}
+        result = self.backtrack(assignment, use_fc, use_lcv)
+        end = time.time()
+
+        return {
+            "solved": result is not None,
+            "solution": result,
+            "runtime_ms": round((end - start) * 1000, 3),
+            "assignments": self.assignments,
+            "backtracks": self.backtracks
+        }
+
+
+def sudoku_neighbors():
+    neighbors = {}
+    for r in range(9):
+        for c in range(9):
+            v = (r, c)
+            neighbors[v] = set()
+
+            for cc in range(9):
+                if cc != c:
+                    neighbors[v].add((r, cc))
+
+            for rr in range(9):
+                if rr != r:
+                    neighbors[v].add((rr, c))
+
+            br, bc = 3 * (r // 3), 3 * (c // 3)
+            for rr in range(br, br + 3):
+                for cc in range(bc, bc + 3):
+                    if (rr, cc) != (r, c):
+                        neighbors[v].add((rr, cc))
+
+    return neighbors
+
+def sudoku_constraint(var1, val1, var2, val2):
+    return val1 != val2
+
+def load_sudoku(path):
+    with open(path) as f:
+        puzzle = json.load(f)["puzzle"]
+
+    variables = [(r, c) for r in range(9) for c in range(9)]
+    domains = {}
+
+    for r in range(9):
+        for c in range(9):
+            if puzzle[r][c] == 0:
+                domains[(r, c)] = list(range(1, 10))
+            else:
+                domains[(r, c)] = [puzzle[r][c]]
+
+    neighbors = sudoku_neighbors()
+
+    return CSP(variables, domains, neighbors, sudoku_constraint)
+
+def format_sudoku(solution):
+    grid = [[0]*9 for _ in range(9)]
+    for (r,c), v in solution.items():
+        grid[r][c] = v
+    return grid
+
+def map_constraint(a, b):
+    return a != b
+
+def load_map(path):
+    with open(path) as f:
+        data = json.load(f)
+
+    variables = data["regions"]
+    domains = {r: list(data["colors"]) for r in variables}
+
+    neighbors = {r: set() for r in variables}
+    for (a, b) in data["adjacent"]:
+        neighbors[a].add(b)
+        neighbors[b].add(a)
+
+    return CSP(variables, domains, neighbors, map_constraint)
+
+def run_solver(problem, instance, config, seed=None):
+    if seed is not None:
+        import random
+        random.seed(seed)
+
+    if problem == "sudoku":
+        csp = load_sudoku(instance)
+    elif problem == "map":
+        csp = load_map(instance)
+    else:
+        raise ValueError("Unknown problem")
+
+    result = csp.solve(config)
+
+    if problem == "sudoku" and result["solved"]:
+        result["solution"] = format_sudoku(result["solution"])
+
+    return result
+
+if __name__ == "__main__":
+    problem = "sudoku"
+    instance = "puzzles/sudoku1.json"
+    config = "mrv_fc"
+
+    result = run_solver(problem, instance, config)
+
+    print(json.dumps({
+        "problem": problem,
+        "instance": instance,
+        "config": config,
+        **result
+    }, indent=2))
+
+    os.makedirs("results", exist_ok=True)
+    outpath = f"results/{problem}_{os.path.basename(instance)}_{config}.json"
+    with open(outpath, "w") as f:
+        json.dump(result, f, indent=2)
