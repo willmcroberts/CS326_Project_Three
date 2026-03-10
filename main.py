@@ -8,8 +8,6 @@ class CSP:
         self.domains = {v: list(domains[v]) for v in variables}
         self.neighbors = neighbors
         self.constraints = constraints
-
-        # instrumentation
         self.assignments = 0
         self.backtracks = 0
 
@@ -65,38 +63,37 @@ class CSP:
                 if use_fc:
                     ok, removed = self.forward_check(var, value, assignment)
                     if ok:
-                        result = self.backtrack(assignment, use_fc, use_lcv)
-                        if result is not None:
-                            return result
+                        back_track_result = self.backtrack(assignment, use_fc, use_lcv)
+                        if back_track_result is not None:
+                            return back_track_result
                     for (n, v) in removed:
                         self.domains[n].append(v)
                 else:
-                    result = self.backtrack(assignment, use_fc, use_lcv)
-                    if result is not None:
-                        return result
+                    back_track_result = self.backtrack(assignment, use_fc, use_lcv)
+                    if back_track_result is not None:
+                        return back_track_result
 
                 del assignment[var]
                 self.backtracks += 1
 
         return None
 
-    def solve(self, config):
-        use_fc = ("fc" in config)
-        use_lcv = ("lcv" in config)
+    def solve(self, configure):
+        use_fc = ("fc" in configure)
+        use_lcv = ("lcv" in configure)
 
         start = time.time()
         assignment = {}
-        result = self.backtrack(assignment, use_fc, use_lcv)
+        backtrack_assignment = self.backtrack(assignment, use_fc, use_lcv)
         end = time.time()
 
         return {
-            "solved": result is not None,
-            "solution": result,
+            "solved": backtrack_assignment is not None,
+            "solution": backtrack_assignment,
             "runtime_ms": round((end - start) * 1000, 3),
             "assignments": self.assignments,
             "backtracks": self.backtracks
         }
-
 
 def sudoku_neighbors():
     neighbors = {}
@@ -104,29 +101,26 @@ def sudoku_neighbors():
         for c in range(9):
             v = (r, c)
             neighbors[v] = set()
-
             for cc in range(9):
                 if cc != c:
                     neighbors[v].add((r, cc))
-
             for rr in range(9):
                 if rr != r:
                     neighbors[v].add((rr, c))
-
             br, bc = 3 * (r // 3), 3 * (c // 3)
             for rr in range(br, br + 3):
                 for cc in range(bc, bc + 3):
                     if (rr, cc) != (r, c):
                         neighbors[v].add((rr, cc))
-
     return neighbors
 
 def sudoku_constraint(var1, val1, var2, val2):
+    # var1 and var2 need to be passed, but are not used here.
     return val1 != val2
 
 def load_sudoku(path):
-    with open(path) as f:
-        puzzle = json.load(f)["puzzle"]
+    with open(path) as naming_a_variable:
+        puzzle = json.load(naming_a_variable)["puzzle"]
 
     variables = [(r, c) for r in range(9) for c in range(9)]
     domains = {}
@@ -177,29 +171,31 @@ def load_map(path):
 
     return CSP(variables, domains, neighbors, map_constraint)
 
-def run_solver(problem, instance, config, seed=None):
+def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
     if seed is not None:
         import random
         random.seed(seed)
 
-    if problem == "sudoku":
-        csp = load_sudoku(instance)
-    elif problem == "map":
-        csp = load_map(instance)
+    if type_of_puzzle == "sudoku":
+        csp = load_sudoku(json_file_input)
+    elif type_of_puzzle == "map":
+        csp = load_map(json_file_input)
     else:
         raise ValueError("Unknown problem")
 
-    result = csp.solve(config)
+    solved_result = csp.solve(configure)
 
-    if problem == "sudoku" and result["solved"]:
-        result["solution"] = format_sudoku(result["solution"])
+    if type_of_puzzle == "sudoku" and solved_result["solved"]:
+        solved_result["solution"] = format_sudoku(solved_result["solution"])
 
-    return result
+    return solved_result
 
+# ✨✨✨✨✨ This is how to change the inputs ✨✨✨✨✨
 if __name__ == "__main__":
-    problem = "sudoku"
-    instance = "puzzles/sudoku1.json"
-    config = "mrv_fc"
+    problem = "sudoku" # "sudoku" for a sudoku puzzle. "map" for a map puzzle
+    instance = "puzzles/sudoku1.json" # "puzzles/sudoku1.json" for the sudoku file, "puzzles/australia.json" for the map puzzle. Add other sudoku and maps as needed
+    config = "mrv_fc" # This doesn't change
+# ✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨
 
     result = run_solver(problem, instance, config)
 
@@ -207,8 +203,10 @@ if __name__ == "__main__":
         "problem": problem,
         "instance": instance,
         "config": config,
-        **result
     }, indent=2))
+
+    if problem == "sudoku":
+        print_sudoku(result["solution"])
 
     os.makedirs("results", exist_ok=True)
     outpath = f"results/{problem}_{os.path.basename(instance)}_{config}.json"

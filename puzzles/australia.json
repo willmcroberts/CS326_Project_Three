@@ -1,0 +1,15 @@
+{
+  "regions": ["WA", "NT", "SA", "Q", "NSW", "V", "T"],
+  "colors": ["red", "green", "blue"],
+  "adjacent": [
+    ["WA", "NT"],
+    ["WA", "SA"],
+    ["NT", "SA"],
+    ["NT", "Q"],
+    ["SA", "Q"],
+    ["SA", "NSW"],
+    ["SA", "V"],
+    ["Q", "NSW"],
+    ["NSW", "V"]
+  ]
+}
