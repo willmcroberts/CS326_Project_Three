@@ -148,8 +148,20 @@ def format_sudoku(solution):
         grid[r][c] = v
     return grid
 
-def map_constraint(a, b):
-    return a != b
+def print_sudoku(grid):
+    for r in range(9):
+        if r % 3 == 0 and r != 0:
+            print("-" * 21)
+        row = ""
+        for c in range(9):
+            if c % 3 == 0 and c != 0:
+                row += "| "
+            row += str(grid[r][c]) + " "
+        print(row)
+
+def map_constraint(var1, val1, var2, val2):
+    # var1 and var2 need to be passed, but are not used here.
+    return val1 != val2
 
 def load_map(path):
     with open(path) as f:
