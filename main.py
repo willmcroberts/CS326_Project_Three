@@ -164,8 +164,8 @@ def map_constraint(var1, val1, var2, val2):
     return val1 != val2
 
 def load_map(path):
-    with open(path) as f:
-        data = json.load(f)
+    with open(path) as naming_another_variable:
+        data = json.load(naming_another_variable)
 
     variables = data["regions"]
     domains = {r: list(data["colors"]) for r in variables}
