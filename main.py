@@ -190,8 +190,9 @@ def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
 
     return solved_result
 
-# ✨✨✨✨✨ This is how to change the inputs ✨✨✨✨✨
+
 if __name__ == "__main__":
+# ✨✨✨✨✨ This is how to change the inputs ✨✨✨✨✨
     problem = "sudoku" # "sudoku" for a sudoku puzzle. "map" for a map puzzle
     instance = "puzzles/sudoku1.json" # "puzzles/sudoku1.json" for the sudoku file, "puzzles/australia.json" for the map puzzle. Add other sudoku and maps as needed
     config = "mrv_fc" # This doesn't change
