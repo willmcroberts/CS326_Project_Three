@@ -192,11 +192,9 @@ def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
 
 
 if __name__ == "__main__":
-# ✨✨✨✨✨ This is how to change the inputs ✨✨✨✨✨
     problem = input("Enter puzzle type (sudoku/map): ")
     instance = "puzzles/" + input("Enter puzzle file: ") # sudoku1.json or australia.json
-    config = "mrv_fc" # This doesn't change
-# ✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨
+    config = "mrv_fc"
 
     result = run_solver(problem, instance, config)
 
@@ -208,6 +206,8 @@ if __name__ == "__main__":
 
     if problem == "sudoku":
         print_sudoku(result["solution"])
+    elif problem == "map":
+        print(result)
 
     os.makedirs("results", exist_ok=True)
     outpath = f"results/{problem}_{os.path.basename(instance)}_{config}.json"
