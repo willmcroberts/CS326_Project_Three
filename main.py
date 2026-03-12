@@ -206,8 +206,10 @@ if __name__ == "__main__":
 
     if problem == "sudoku":
         print_sudoku(result["solution"])
+        print("Runtime: " + str(result["runtime_ms"]) + "ms")
     elif problem == "map":
-        print(result)
+        print("Result: " + str(result["solution"]))
+        print("Runtime: " + str(result["runtime_ms"]) + "ms")
 
     os.makedirs("results", exist_ok=True)
     outpath = f"results/{problem}_{os.path.basename(instance)}_{config}.json"
