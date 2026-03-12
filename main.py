@@ -115,7 +115,6 @@ def sudoku_neighbors():
     return neighbors
 
 def sudoku_constraint(var1, val1, var2, val2):
-    # var1 and var2 need to be passed, but are not used here.
     return val1 != val2
 
 def load_sudoku(path):
@@ -154,7 +153,6 @@ def print_sudoku(grid):
         print(row)
 
 def map_constraint(var1, val1, var2, val2):
-    # var1 and var2 need to be passed, but are not used here.
     return val1 != val2
 
 def load_map(path):
@@ -170,6 +168,55 @@ def load_map(path):
         neighbors[b].add(a)
 
     return CSP(variables, domains, neighbors, map_constraint)
+
+
+# Tests
+def sudoku_is_complete(grid):
+    return all(grid[r][c] != 0 for r in range(9) for c in range(9))
+
+def sudoku_rows_valid(grid):
+    return all(sorted(grid[r]) == list(range(1, 10)) for r in range(9))
+
+def sudoku_cols_valid(grid):
+    for c in range(9):
+        col = [grid[r][c] for r in range(9)]
+        if sorted(col) != list(range(1, 10)):
+            return False
+    return True
+
+def sudoku_blocks_valid(grid):
+    for br in range(0, 9, 3):
+        for bc in range(0, 9, 3):
+            block = []
+            for r in range(br, br + 3):
+                for c in range(bc, bc + 3):
+                    block.append(grid[r][c])
+            if sorted(block) != list(range(1, 10)):
+                return False
+    return True
+
+def sudoku_solution_valid(grid):
+    return (
+            sudoku_is_complete(grid)
+            and sudoku_rows_valid(grid)
+            and sudoku_cols_valid(grid)
+            and sudoku_blocks_valid(grid)
+    )
+
+def map_is_complete(solution, regions):
+    return all(region in solution for region in regions)
+
+def map_colors_valid(solution, adjacency_list):
+    for (u, v) in adjacency_list:
+        if solution[u] == solution[v]:
+            return False
+    return True
+
+def map_solution_valid(solution, regions, adjacency_list):
+    return (
+            map_is_complete(solution, regions)
+            and map_colors_valid(solution, adjacency_list)
+    )
 
 def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
     if seed is not None:
@@ -190,10 +237,10 @@ def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
 
     return solved_result
 
-
+# Main
 if __name__ == "__main__":
     problem = input("Enter puzzle type (sudoku/map): ")
-    instance = "puzzles/" + input("Enter puzzle file: ") # sudoku1.json or australia.json
+    instance = "puzzles/" + input("Enter puzzle file: ")
     config = "mrv_fc"
 
     result = run_solver(problem, instance, config)
@@ -206,10 +253,17 @@ if __name__ == "__main__":
 
     if problem == "sudoku":
         print_sudoku(result["solution"])
-        print("Runtime: " + str(result["runtime_ms"]) + "ms")
+        print("Runtime:", result["runtime_ms"], "ms")
+
+        print("Sudoku valid:", sudoku_solution_valid(result["solution"]))
+
     elif problem == "map":
-        print("Result: " + str(result["solution"]))
-        print("Runtime: " + str(result["runtime_ms"]) + "ms")
+        print("Result:", result["solution"])
+        print("Runtime:", result["runtime_ms"], "ms")
+
+        with open(instance) as f:
+            data = json.load(f)
+        print("Map valid:", map_solution_valid(result["solution"], data["regions"], data["adjacent"]))
 
     os.makedirs("results", exist_ok=True)
     outpath = f"results/{problem}_{os.path.basename(instance)}_{config}.json"
