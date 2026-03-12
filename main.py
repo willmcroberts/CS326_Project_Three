@@ -1,3 +1,5 @@
+# This comment is to change the code in order to open a pull request
+
 import time
 import json
 import os
@@ -241,7 +243,7 @@ def run_solver(type_of_puzzle, json_file_input, configure, seed=None):
 if __name__ == "__main__":
     problem = input("Enter puzzle type (sudoku/map): ")
     instance = "puzzles/" + input("Enter puzzle file: ")
-    config = "mrv_fc"
+    config = "use_lcv"
 
     result = run_solver(problem, instance, config)
 
